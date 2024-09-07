@@ -1,177 +1,129 @@
-from flask import Flask, request, jsonify,render_template
-import torch
-import json
-import uuid
-from model import NeuralNet
+import numpy as np
 import random
-from nltk_utils import bag_of_words, tokenize
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+import json
 
-app = Flask(__name__)
+import torch
+import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader
 
-food_check = 0
-# Load intents from JSON
-with open('intents.json', 'r') as file:
-    intents = json.load(file)
+from nltk_utils import bag_of_words, tokenize, stem
+from model import NeuralNet
 
-# Create SQLite database engine
-engine = create_engine('sqlite:///shop.db', echo=False)
+with open('intents.json', 'r') as f:
+    intents = json.load(f)
 
-# Define a base class for declarative class definitions
-Base = declarative_base()
+all_words = []
+tags = []
+xy = []
+# loop through each sentence in our intents patterns
+for intent in intents['intents']:
+    tag = intent['tag']
+    # add to tag list
+    tags.append(tag)
+    for pattern in intent['patterns']:
+        # tokenize each word in the sentence
+        w = tokenize(pattern)
+        # add to our words list
+        all_words.extend(w)
+        # add to xy pair
+        xy.append((w, tag))
 
-# Define Product model
-class Product(Base):
-    __tablename__ = 'products'
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
+# stem and lower each word
+ignore_words = ['?', '.', '!']
+all_words = [stem(w) for w in all_words if w not in ignore_words]
+# remove duplicates and sort
+all_words = sorted(set(all_words))
+tags = sorted(set(tags))
 
-# Define Order model
-class Order(Base):
-    __tablename__ = 'orders'
-    id = Column(Integer, primary_key=True)
-    order_number = Column(String, unique=True)
-    product_id = Column(Integer, ForeignKey('products.id'))
+print(len(xy), "patterns")
+print(len(tags), "tags:", tags)
+print(len(all_words), "unique stemmed words:", all_words)
 
-    # Relationship to Product
-    product = relationship('Product')
+# create training data
+X_train = []
+y_train = []
+for (pattern_sentence, tag) in xy:
+    # X: bag of words for each pattern_sentence
+    bag = bag_of_words(pattern_sentence, all_words)
+    X_train.append(bag)
+    # y: PyTorch CrossEntropyLoss needs only class labels, not one-hot
+    label = tags.index(tag)
+    y_train.append(label)
 
-# Base.metadata.drop_all(engine)
-# Base.metadata.create_all(engine)
+X_train = np.array(X_train)
+y_train = np.array(y_train)
 
-def create_tables_if_not_exists():
-    # Create tables if they do not exist
-    Base.metadata.create_all(engine)
+# Hyper-parameters 
+num_epochs = 1000
+batch_size = 8
+learning_rate = 0.001
+input_size = len(X_train[0])
+hidden_size = 8
+output_size = len(tags)
+print(input_size, output_size)
 
-# Call this function once during application startup
-create_tables_if_not_exists()
+class ChatDataset(Dataset):
 
-Session = sessionmaker(bind=engine)
+    def __init__(self):
+        self.n_samples = len(X_train)
+        self.x_data = X_train
+        self.y_data = y_train
 
-def get_session():
-    return Session()
+    # support indexing such that dataset[i] can be used to get i-th sample
+    def __getitem__(self, index):
+        return self.x_data[index], self.y_data[index]
 
-# Function to add products to the database
-def add_products(products):
-    session = get_session()  # Create a new session
-    try:
-        for product in products:
-            new_product = Product(name=product)
-            session.add(new_product)
-        session.commit()
-    except Exception as e:
-        session.rollback()
-        print(f"An error occurred: {e}")
-    finally:
-        session.close()  # Ensure the session is closed
+    # we can call len(dataset) to return the size
+    def __len__(self):
+        return self.n_samples
 
-# Example of adding products
-products_to_add = ['Coffee', 'Tea', 'Milk', 'Sugar', 'Cookies']
-add_products(products_to_add)
-
-
-# Load pretrained model data
-FILE = "data.pth"
-data = torch.load(FILE)
-
-input_size = data["input_size"]
-hidden_size = data["hidden_size"]
-output_size = data["output_size"]
-all_words = data['all_words']
-tags = data['tags']
-model_state = data["model_state"]
+dataset = ChatDataset()
+train_loader = DataLoader(dataset=dataset,
+                          batch_size=batch_size,
+                          shuffle=True,
+                          num_workers=0)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 model = NeuralNet(input_size, hidden_size, output_size).to(device)
-model.load_state_dict(model_state)
-model.eval()
 
-bot_name = "Sam"
+# Loss and optimizer
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-food_check = {'value': 0}
-
-def is_food_item(product_name):
-    session = get_session()
-    try:
-        product_name = product_name.strip().lower()
-        product = session.query(Product).filter(Product.name.ilike(f"%{product_name}%")).first()
-        return product is not None
-    finally:
-        session.close()
-
-
-def get_response(msg, user_id):
-    if food_check['value'] == 1 and is_food_item(msg):
-        session = get_session()
-        try:
-            product = session.query(Product).filter(Product.name.ilike(f"%{msg.strip().lower()}%")).first()
-            if product:
-                # Use the order ID as the row number
-                new_order_number = session.query(Order).count() + 1
-                new_order = Order(order_number=str(new_order_number), product_id=product.id)
-                session.add(new_order)
-                session.commit()
-                food_check['value'] = 0
-                return f"Your order has been placed! Order number: {new_order_number}"
-            else:
-                return "The item you requested is not available."
-        finally:
-            session.close()
+# Train the model
+for epoch in range(num_epochs):
+    for (words, labels) in train_loader:
+        words = words.to(device)
+        labels = labels.to(dtype=torch.long).to(device)
         
-    sentence = tokenize(msg)
-    X = bag_of_words(sentence, all_words)
-    X = X.reshape(1, X.shape[0])
-    X = torch.from_numpy(X).to(device)
-
-    output = model(X)
-    _, predicted = torch.max(output, dim=1)
-
-    tag = tags[predicted.item()]
-    probs = torch.softmax(output, dim=1)
-    prob = probs[0][predicted.item()]
-    
-    session = get_session()
-    try:
-        if prob.item() > 0.75:
-            for intent in intents['intents']:
-                if tag == intent["tag"]:
-                    if intent['tag'] == 'items':
-                        products = session.query(Product.name).distinct().all()
-                        product_names = [product.name for product in products]
-                        return f"We have {', '.join(product_names)}"
-                    
-                    elif intent['tag'] == 'order':
-                        products = session.query(Product.name).distinct().all()
-                        product_names = [product.name for product in products]
-                        food_check['value'] = 1
-                        return f"Sure! Please choose a product from the list below:\n{', '.join(product_names)}"
-                    
-                    else:
-                        return random.choice(intent['responses'])
-    finally:
-        session.close()
-
-    return "I do not understand..."
+        # Forward pass
+        outputs = model(words)
+        # if y would be one-hot, we must apply
+        # labels = torch.max(labels, 1)[1]
+        loss = criterion(outputs, labels)
+        
+        # Backward and optimize
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        
+    if (epoch+1) % 100 == 0:
+        print (f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
 
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+print(f'final loss: {loss.item():.4f}')
 
+data = {
+"model_state": model.state_dict(),
+"input_size": input_size,
+"hidden_size": hidden_size,
+"output_size": output_size,
+"all_words": all_words,
+"tags": tags
+}
 
-@app.route('/get_response', methods=['POST'])
-def get_response_route():
-    user_message = request.json.get('message', '')
-    user_id = str(uuid.uuid4())  # Simulate unique user ID for conversation state
-    response = get_response(user_message, user_id)
-    return jsonify({'response': response})
+FILE = "data.pth"
+torch.save(data, FILE)
 
-if __name__ == "__main__":
-    app.run(debug=True)
-
-# Close the session when done
-@app.teardown_appcontext
-def shutdown_session(exception=None):
-    session.remove()
+print(f'training complete. file saved to {FILE}')

@@ -1,0 +1,177 @@
+{
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": [
+        "Hi",
+        "Hey",
+        "How are you",
+        "Is anyone there?",
+        "Hello",
+        "Good day"
+      ],
+      "responses": [
+        "Hey :-)",
+        "Hello, thanks for visiting",
+        "Hi there, what can I do for you?",
+        "Hi there, how can I help?"
+      ]
+    },
+    {
+      "tag": "goodbye",
+      "patterns": ["Bye", "See you later", "Goodbye"],
+      "responses": [
+        "See you later, thanks for visiting",
+        "Have a nice day",
+        "Bye! Come back again soon."
+      ]
+    },
+    {
+      "tag": "order",
+      "patterns": ["I want to order", "Place an order", "I'd like to order", "Can I order"],
+      "responses": ["Sure! Please choose a product from the list below:"],
+      "context": ["ordering"]
+    },
+    {
+      "tag": "thanks",
+      "patterns": ["Thanks", "Thank you", "That's helpful", "Thank's a lot!"],
+      "responses": ["Happy to help!", "Any time!", "My pleasure"]
+    },
+    {
+      "tag": "items",
+      "patterns": [
+        "Which items do you have?",
+        "What kinds of items are there?",
+        "What do you sell?"
+      ],
+      "responses": []
+    },
+    {
+      "tag": "payments",
+      "patterns": [
+        "Do you take credit cards?",
+        "Do you accept Mastercard?",
+        "Can I pay with Paypal?",
+        "Are you cash only?"
+      ],
+      "responses": [
+        "We accept VISA, Mastercard and Paypal",
+        "We accept most major credit cards, and Paypal"
+      ]
+    },
+    {
+      "tag": "delivery",
+      "patterns": [
+        "How long does delivery take?",
+        "How long does shipping take?",
+        "When do I get my delivery?"
+      ],
+      "responses": [
+        "Delivery takes 2-4 days",
+        "Shipping takes 2-4 days"
+      ]
+    },
+    {
+      "tag": "order_status",
+      "patterns": [
+        "Where is my order?",
+        "What's the status of my order?",
+        "Track my order",
+        "Order status"
+      ],
+      "responses": [
+        "Please provide your order number, and I will check the status for you.",
+        "Can you give me your order ID to track the status?"
+      ]
+    },
+    {
+      "tag": "return_policy",
+      "patterns": [
+        "What is your return policy?",
+        "Can I return an item?",
+        "How do I return a product?",
+        "Return policy"
+      ],
+      "responses": [
+        "You can return any item within 30 days of purchase. Please visit our returns page for more details.",
+        "Our return policy allows for returns within 30 days. Visit our returns page for more information."
+      ]
+    },
+    {
+      "tag": "exchange_policy",
+      "patterns": [
+        "Can I exchange an item?",
+        "How do I exchange a product?",
+        "Exchange policy"
+      ],
+      "responses": [
+        "You can exchange an item within 30 days of purchase. Please visit our exchanges page for more details.",
+        "Our exchange policy allows for exchanges within 30 days. Visit our exchanges page for more information."
+      ]
+    },
+    {
+      "tag": "cancel_order",
+      "patterns": [
+        "Can I cancel my order?",
+        "How do I cancel my order?",
+        "Cancel order"
+      ],
+      "responses": [
+        "Please provide your order number, and I will check if it can be canceled.",
+        "Can you give me your order ID to check if the cancellation is possible?"
+      ]
+    },
+    {
+      "tag": "discounts",
+      "patterns": [
+        "Do you have any discounts?",
+        "Current promotions?",
+        "Any offers?",
+        "Discount codes"
+      ],
+      "responses": [
+        "We currently have a 10% discount on all items. Use the code SAVE10 at checkout.",
+        "Check out our promotions page for the latest offers."
+      ]
+    },
+    {
+      "tag": "support",
+      "patterns": [
+        "I need help",
+        "Support",
+        "Customer service",
+        "Help me"
+      ],
+      "responses": [
+        "How can I assist you today?",
+        "What do you need help with?"
+      ]
+    },
+    {
+      "tag": "product_information",
+      "patterns": [
+        "Tell me more about this product",
+        "Product details",
+        "More info on this item",
+        "What are the features of this product?"
+      ],
+      "responses": [
+        "Please provide the product name or ID for more details.",
+        "Can you specify which product you need information about?"
+      ]
+    },
+    {
+      "tag": "feedback",
+      "patterns": [
+        "I want to give feedback",
+        "Feedback",
+        "How can I leave a review?",
+        "I have a suggestion"
+      ],
+      "responses": [
+        "We appreciate your feedback! Please visit our feedback page to leave your comments.",
+        "You can leave a review on our feedback page. We value your suggestions!"
+      ]
+    }
+  ]
+}

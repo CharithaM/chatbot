@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <style>
+        body {
+    font-family: Arial, sans-serif;
+    background-color: #1c1c1c; /* Dark background for the body */
+    color: black; /* Light text color */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.chat-container {
+    width: 80%;
+    max-width: 600px;
+    background-color: #2c2c2c; /* Darker background for the chat container */
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.chat-box {
+    padding: 20px;
+    height: 350px;
+    overflow-y: auto;
+    border-bottom: 2px solid #b39ddb; /* Lavender border */
+    background-color: #3e3e3e; /* Slightly lighter dark background */
+}
+
+.input-box {
+    width: calc(100% - 40px);
+    padding: 15px;
+    margin: 20px;
+    border: 2px solid #b39ddb; /* Lavender border */
+    border-radius: 25px;
+    outline: none;
+    font-size: 16px;
+    box-sizing: border-box;
+    background-color: #4a148c; /* Darker lavender background for input */
+    color: #e0e0e0; /* Light text color */
+}
+
+.chat-message {
+    margin: 15px 0;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: #d1c4e9; /* Dark gray background for messages */
+}
+
+.user-message {
+    text-align: right;
+    background-color: #b39ddb; /* Lavender background for user messages */
+    color: #000000; /* Black text for contrast */
+}
+
+.chat-message strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #000000;
+}
+
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <div id="chat-box" class="chat-box"></div>
+        <input type="text" id="user-input" class="input-box" placeholder="Type a message..." onkeydown="if (event.key === 'Enter') { sendMessage(); }">
+    </div>
+    
+    <script>
+        function sendMessage() {
+            let userInput = document.getElementById('user-input').value;
+            if (userInput.trim() === '') return;
+    
+            let chatBox = document.getElementById('chat-box');
+            let userMessage = `<div class="chat-message user-message"><strong>You:</strong> ${userInput}</div>`;
+            chatBox.innerHTML += userMessage;
+            document.getElementById('user-input').value = '';
+    
+            fetch('/get_response', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: userInput })
+            })
+            .then(response => response.json())
+            .then(data => {
+                let botMessage = `<div class="chat-message"><strong>Bot:</strong> ${data.response}</div>`;
+                chatBox.innerHTML += botMessage;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+        }
+    </script>
+</body>
+
+</html>
